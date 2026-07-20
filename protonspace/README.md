@@ -13,6 +13,9 @@ GET  /api/feed
 POST /api/posts
 POST /api/posts/:id/comments
 PUT  /api/posts/:id/reaction
+POST /api/follows/:accountId
+DELETE /api/follows/:accountId
+GET  /api/notifications
 GET  /api/profiles/:slug
 PUT  /api/profile
 POST /api/follows/:accountId
