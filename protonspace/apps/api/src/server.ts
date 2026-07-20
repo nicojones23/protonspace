@@ -25,6 +25,8 @@ async function route(req: IncomingMessage, res: ServerResponse) {
   if (req.method === 'OPTIONS') return json(res,204,{});
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   if (req.method === 'GET' && url.pathname === '/health') return json(res,200,{ok:true,service:'protonspace-api'});
+  if (req.method === 'GET' && url.pathname === '/api/auth/session') { const current=session(req); return json(res,200,{authenticated:Boolean(current)}); }
+  if (req.method === 'POST' && url.pathname === '/api/auth/logout') { res.setHeader('set-cookie','proton_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'); return json(res,200,{ok:true}); }
   if (req.method === 'GET' && url.pathname === '/api/auth/discord') {
     if (!discordClientSecret) return json(res,503,{error:'discord_login_not_configured'});
     const state=randomUUID(); oauthStates.set(state,Date.now()+600000); const redirect='https://api.mhprotonspace.org/api/auth/discord/callback';
