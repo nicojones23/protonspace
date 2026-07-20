@@ -1,5 +1,5 @@
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import mysql from 'mysql2/promise';
 
 const port = Number(process.env.PORT ?? 4080);
@@ -8,12 +8,14 @@ const cityosSecret = process.env.CITYOS_PROTON_TICKET_SECRET ?? '';
 const discordClientId = process.env.DISCORD_CLIENT_ID ?? '1528626770557931742';
 const discordClientSecret = process.env.DISCORD_CLIENT_SECRET ?? '';
 const publicSite = process.env.PROTONSPACE_WEB_URL ?? 'https://nicojones23.github.io/protonspace/';
+const oauthStateSecret = process.env.DISCORD_OAUTH_STATE_SECRET ?? (discordClientSecret || cityosSecret);
 const pool = mysql.createPool(process.env.DATABASE_URL ?? 'mysql://cityos:CHANGE_ME@127.0.0.1/cityos_fivem');
 
 type Session = { accountId: number; characterId?: string; expiresAt: number };
 const sessions = new Map<string, Session>();
 const tickets = new Map<string, { accountId: number; citizenId: string; expiresAt: number; used: boolean }>();
-const oauthStates = new Map<string, number>();
+function makeOAuthState() { const payload=Buffer.from(`${Date.now()}.${randomUUID()}`).toString('base64url'); const sig=createHmac('sha256',oauthStateSecret).update(payload).digest('base64url'); return `${payload}.${sig}`; }
+function validOAuthState(state:string) { const [payload,sig]=state.split('.'); if(!payload||!sig||!oauthStateSecret)return false; const expected=createHmac('sha256',oauthStateSecret).update(payload).digest('base64url'); if(sig!==expected)return false; const issued=Number(Buffer.from(payload,'base64url').toString().split('.')[0]); return Number.isFinite(issued)&&Date.now()-issued<600000; }
 
 function json(res: ServerResponse, status: number, body: unknown) { res.writeHead(status, {'content-type':'application/json; charset=utf-8','access-control-allow-origin':origin,'access-control-allow-credentials':'true','access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS','access-control-allow-headers':'Content-Type'}); res.end(JSON.stringify(body)); }
 async function body(req: IncomingMessage) { let raw=''; for await (const chunk of req) raw += chunk; return raw ? JSON.parse(raw) : {}; }
@@ -29,12 +31,12 @@ async function route(req: IncomingMessage, res: ServerResponse) {
   if (req.method === 'POST' && url.pathname === '/api/auth/logout') { res.setHeader('set-cookie','proton_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'); return json(res,200,{ok:true}); }
   if (req.method === 'GET' && url.pathname === '/api/auth/discord') {
     if (!discordClientSecret) return json(res,503,{error:'discord_login_not_configured'});
-    const state=randomUUID(); oauthStates.set(state,Date.now()+600000); const redirect='https://api.mhprotonspace.org/api/auth/discord/callback';
+    const state=makeOAuthState(); const redirect='https://api.mhprotonspace.org/api/auth/discord/callback';
     res.writeHead(302,{location:`https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(discordClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirect)}&scope=identify&state=${encodeURIComponent(state)}`}); return res.end();
   }
   if (req.method === 'GET' && url.pathname === '/api/auth/discord/callback') {
-    const code=url.searchParams.get('code')||'', state=url.searchParams.get('state')||'', expires=oauthStates.get(state);
-    if (!code || expires===undefined || expires<Date.now()) return json(res,400,{error:'invalid_oauth_state'}); oauthStates.delete(state);
+    const code=url.searchParams.get('code')||'', state=url.searchParams.get('state')||'';
+    if (!code || !validOAuthState(state)) return json(res,400,{error:'invalid_oauth_state'});
     const redirect='https://api.mhprotonspace.org/api/auth/discord/callback'; const tokenRes=await fetch('https://discord.com/api/oauth2/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:discordClientId,client_secret:discordClientSecret,grant_type:'authorization_code',code,redirect_uri:redirect})});
     if(!tokenRes.ok)return json(res,502,{error:'discord_token_exchange_failed'}); const token=await tokenRes.json() as any; const userRes=await fetch('https://discord.com/api/v10/users/@me',{headers:{authorization:`Bearer ${token.access_token}`}}); if(!userRes.ok)return json(res,502,{error:'discord_identity_failed'}); const user=await userRes.json() as any;
     const username=('discord_'+String(user.id)).slice(0,40), displayName=String(user.global_name||user.username||'Discord user').slice(0,80), accountPublicId=publicId(); await pool.query('INSERT INTO proton_accounts (public_id,username,display_name,discord_id,last_login_at) VALUES (?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),last_login_at=NOW()',[accountPublicId,username,displayName,String(user.id)]); const [accounts]=await pool.query('SELECT id FROM proton_accounts WHERE discord_id=? AND account_status="active" LIMIT 1',[String(user.id)]); const accountId=Number((accounts as any[])[0]?.id); if(!accountId)return json(res,500,{error:'account_link_failed'});
