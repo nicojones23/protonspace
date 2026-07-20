@@ -1,0 +1,12 @@
+{
+  "profiles": true,
+  "guestbook": false,
+  "customHtml": false,
+  "chat": false,
+  "realtimePresence": false,
+  "appStore": false,
+  "mediaUploads": false,
+  "streaming": false,
+  "creatorLedger": false,
+  "moderationReports": true
+}

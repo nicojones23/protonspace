@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "identity": {"surface": ["web", "fivem"], "account": "server-owned", "character": "qbox-owned"},
+  "ticket": {"ttlSeconds": 45, "oneTime": true, "audience": "protonspace"},
+  "post": {"maxBodyLength": 2000, "visibility": ["public", "followers", "friends", "private"]},
+  "reaction": {"values": ["like", "love", "fire", "laugh", "wow", "clap"]},
+  "features": {"chat": false, "streaming": false, "crypto": false, "creatorPayments": false, "customHtml": false}
+}
