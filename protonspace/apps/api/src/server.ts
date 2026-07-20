@@ -7,7 +7,7 @@ const origin = process.env.PROTONSPACE_WEB_ORIGIN ?? 'http://localhost:5173';
 const cityosSecret = process.env.CITYOS_PROTON_TICKET_SECRET ?? '';
 const discordClientId = process.env.DISCORD_CLIENT_ID ?? '1528626770557931742';
 const discordClientSecret = process.env.DISCORD_CLIENT_SECRET ?? '';
-const publicSite = process.env.PROTONSPACE_WEB_ORIGIN ?? 'https://nicojones23.github.io/protonspace';
+const publicSite = process.env.PROTONSPACE_WEB_URL ?? 'https://nicojones23.github.io/protonspace/';
 const pool = mysql.createPool(process.env.DATABASE_URL ?? 'mysql://cityos:CHANGE_ME@127.0.0.1/cityos_fivem');
 
 type Session = { accountId: number; characterId?: string; expiresAt: number };
