@@ -15,7 +15,7 @@ const sessions = new Map<string, Session>();
 const tickets = new Map<string, { accountId: number; citizenId: string; expiresAt: number; used: boolean }>();
 const oauthStates = new Map<string, number>();
 
-function json(res: ServerResponse, status: number, body: unknown) { res.writeHead(status, {'content-type':'application/json; charset=utf-8','access-control-allow-origin':origin,'access-control-allow-credentials':'true'}); res.end(JSON.stringify(body)); }
+function json(res: ServerResponse, status: number, body: unknown) { res.writeHead(status, {'content-type':'application/json; charset=utf-8','access-control-allow-origin':origin,'access-control-allow-credentials':'true','access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS','access-control-allow-headers':'Content-Type'}); res.end(JSON.stringify(body)); }
 async function body(req: IncomingMessage) { let raw=''; for await (const chunk of req) raw += chunk; return raw ? JSON.parse(raw) : {}; }
 function cookie(req: IncomingMessage, name: string) { return (req.headers.cookie ?? '').split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))?.slice(name.length+1); }
 function session(req: IncomingMessage) { const key=cookie(req,'proton_session'); const s=key?sessions.get(key):undefined; return s && s.expiresAt>Date.now()?s:null; }
