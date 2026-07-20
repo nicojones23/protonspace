@@ -1,0 +1,6 @@
+{
+  "name": "protonspace-web",
+  "private": true,
+  "type": "module",
+  "scripts": {"build": "node scripts/build-static.mjs", "dev": "node --watch scripts/dev-server.mjs"}
+}
