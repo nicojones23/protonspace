@@ -35,12 +35,20 @@ async function route(req: IncomingMessage, res: ServerResponse) {
     res.writeHead(302,{location:`https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(discordClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirect)}&scope=identify&state=${encodeURIComponent(state)}`}); return res.end();
   }
   if (req.method === 'GET' && url.pathname === '/api/auth/discord/callback') {
+    const callbackId=randomUUID().slice(0,8); console.log(`[discord:${callbackId}] callback_received`);
     const code=url.searchParams.get('code')||'', state=url.searchParams.get('state')||'';
-    if (!code || !validOAuthState(state)) return json(res,400,{error:'invalid_oauth_state'});
-    const redirect='https://api.mhprotonspace.org/api/auth/discord/callback'; const tokenRes=await fetch('https://discord.com/api/oauth2/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:discordClientId,client_secret:discordClientSecret,grant_type:'authorization_code',code,redirect_uri:redirect})});
-    if(!tokenRes.ok)return json(res,502,{error:'discord_token_exchange_failed'}); const token=await tokenRes.json() as any; const userRes=await fetch('https://discord.com/api/v10/users/@me',{headers:{authorization:`Bearer ${token.access_token}`}}); if(!userRes.ok)return json(res,502,{error:'discord_identity_failed'}); const user=await userRes.json() as any;
-    const username=('discord_'+String(user.id)).slice(0,40), displayName=String(user.global_name||user.username||'Discord user').slice(0,80), accountPublicId=publicId(); await pool.query('INSERT INTO proton_accounts (public_id,username,display_name,discord_id,last_login_at) VALUES (?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),last_login_at=NOW()',[accountPublicId,username,displayName,String(user.id)]); const [accounts]=await pool.query('SELECT id FROM proton_accounts WHERE discord_id=? AND account_status="active" LIMIT 1',[String(user.id)]); const accountId=Number((accounts as any[])[0]?.id); if(!accountId)return json(res,500,{error:'account_link_failed'});
-    const sessionId=randomUUID(); sessions.set(sessionId,{accountId,expiresAt:Date.now()+86400000}); res.setHeader('set-cookie',`proton_session=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`); res.writeHead(302,{location:publicSite}); return res.end();
+    if (!code || !validOAuthState(state)) { console.warn(`[discord:${callbackId}] invalid_state`); return json(res,400,{error:'invalid_oauth_state',callbackId}); }
+    try {
+      const redirect='https://api.mhprotonspace.org/api/auth/discord/callback'; console.log(`[discord:${callbackId}] token_exchange_start`);
+      const tokenRes=await fetch('https://discord.com/api/oauth2/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:discordClientId,client_secret:discordClientSecret,grant_type:'authorization_code',code,redirect_uri:redirect}),signal:AbortSignal.timeout(10000)});
+      if(!tokenRes.ok){console.warn(`[discord:${callbackId}] token_exchange_failed status=${tokenRes.status}`);return json(res,502,{error:'discord_token_exchange_failed',callbackId});}
+      const token=await tokenRes.json() as any; console.log(`[discord:${callbackId}] identity_start`);
+      const userRes=await fetch('https://discord.com/api/v10/users/@me',{headers:{authorization:`Bearer ${token.access_token}`},signal:AbortSignal.timeout(10000)});
+      if(!userRes.ok){console.warn(`[discord:${callbackId}] identity_failed status=${userRes.status}`);return json(res,502,{error:'discord_identity_failed',callbackId});}
+      const user=await userRes.json() as any; console.log(`[discord:${callbackId}] database_start`);
+      const username=('discord_'+String(user.id)).slice(0,40), displayName=String(user.global_name||user.username||'Discord user').slice(0,80), accountPublicId=publicId(); await pool.query('INSERT INTO proton_accounts (public_id,username,display_name,discord_id,last_login_at) VALUES (?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),last_login_at=NOW()',[accountPublicId,username,displayName,String(user.id)]); const [accounts]=await pool.query('SELECT id FROM proton_accounts WHERE discord_id=? AND account_status="active" LIMIT 1',[String(user.id)]); const accountId=Number((accounts as any[])[0]?.id); if(!accountId)return json(res,500,{error:'account_link_failed',callbackId});
+      const sessionId=randomUUID(); sessions.set(sessionId,{accountId,expiresAt:Date.now()+86400000}); console.log(`[discord:${callbackId}] complete`); res.setHeader('set-cookie',`proton_session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=86400`); res.writeHead(302,{location:publicSite}); return res.end();
+    } catch(error:any) { console.error(`[discord:${callbackId}] exception ${error?.name||'Error'} ${error?.code||''}`); return json(res,502,{error:'discord_callback_failed',callbackId}); }
   }
   if (req.method === 'POST' && url.pathname === '/api/auth/ticket/exchange') {
     const input=await body(req); const ticket=tickets.get(String(input.ticket ?? ''));
