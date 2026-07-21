@@ -681,6 +681,7 @@
         <div class="logo">Proton<span>Space</span></div>
         <input class="search" placeholder="Search ProtonSpace" />
         <nav class="topnav">
+          <label id="identityWrap" class="small" style="color:white">Posting as: <select id="identitySwitcher" aria-label="Active identity"></select></label>
           <button data-view="home">Home</button
           ><button data-view="people">Friends</button
           ><button data-view="notifications">Alerts</button
@@ -728,6 +729,7 @@
             <div class="box composer">
               <div class="boxtitle">Post to the City Wall</div>
               <div class="boxbody">
+                <div id="postingAs" class="small" style="margin-bottom:8px;font-weight:bold"></div>
                 <textarea
                   id="postBody"
                   maxlength="2000"
@@ -969,8 +971,12 @@
             }),
             d = await r.json();
           if (!d.authenticated) return;
-          me = d.account;
+          me = d.identity;
           document.querySelector("#landing").remove();
+          const switcher=document.querySelector("#identitySwitcher");
+          switcher.innerHTML=(d.identities||[]).map(i=>`<option value="${esc(i.publicId)}" ${i.publicId===me?.publicId?"selected":""}>${esc(i.displayName)} (${esc(i.type)})</option>`).join("");
+          switcher.disabled=Boolean(d.identityLocked); document.querySelector("#identityWrap").title=d.identityLocked?"Locked to your active FiveM character":"Switch posting identity";
+          document.querySelector("#postingAs").textContent=`Posting as: ${me?.displayName||"Citizen"} · ${me?.type||"identity"}${d.identityLocked?" · locked to active character":""}`;
           for (const id of ["myName", "profileName"])
             document.querySelector("#" + id).textContent =
               me?.displayName || me?.username || "Citizen";
@@ -985,6 +991,10 @@
       }
       document.querySelector("#discordLogin").onclick = () =>
         (location.href = api + "/api/auth/discord");
+      document.querySelector("#identitySwitcher").onchange = async (e) => {
+        const r=await fetch(api+"/api/auth/identity",{method:"POST",credentials:"include",headers:{"content-type":"application/json"},body:JSON.stringify({identityPublicId:e.target.value})});
+        if(r.ok) location.reload(); else { const d=await r.json(); alert(d.error||"That identity is not available."); }
+      };
       document.querySelector("#logout").onclick = async () => {
         await fetch(api + "/api/auth/logout", {
           method: "POST",
@@ -1164,7 +1174,7 @@
       async function loadProfile() {
         const r = await fetch(api + "/api/me", { credentials: "include" }),
           d = await r.json(),
-          p = d.account || {};
+          p = d.identity || {};
         document.querySelector("#editDisplayName").value =
           p.displayName || me?.displayName || "";
         document.querySelector("#editSlug").value = p.slug || p.username || "";

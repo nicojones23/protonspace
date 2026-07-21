@@ -12,6 +12,14 @@ local function character(src)
   }
 end
 
+local function discordId(src)
+  for _, identifier in ipairs(GetPlayerIdentifiers(src)) do
+    local value = identifier:match('^discord:(.+)$')
+    if value then return value end
+  end
+  return nil
+end
+
 function ProtonSocialBridge.issueTicket(src)
   if not ProtonSocialBridgeConfig.enabled then return false, 'bridge_disabled' end
   local c = character(src)
@@ -43,7 +51,7 @@ function ProtonSocialBridge.issueTicket(src)
       },
     })
     print(('[proton_social_bridge] browser handoff delivered src=%s'):format(tostring(src)))
-  end, 'POST', json.encode({ citizenId = c.citizenId, characterName = c.characterName }), { ['Content-Type'] = 'application/json', ['X-CityOS-Ticket-Secret'] = ProtonSocialBridgeConfig.apiSecret })
+  end, 'POST', json.encode({ citizenId = c.citizenId, characterName = c.characterName, discordId = discordId(src), serverKey = 'most_hated_rp' }), { ['Content-Type'] = 'application/json', ['X-CityOS-Ticket-Secret'] = ProtonSocialBridgeConfig.apiSecret })
   return true, 'ticket_request_queued'
 end
 
