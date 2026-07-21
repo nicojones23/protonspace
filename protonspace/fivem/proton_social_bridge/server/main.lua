@@ -54,3 +54,7 @@ RegisterNetEvent('proton_social_bridge:server:requestTicket', function()
   local ok, reason = ProtonSocialBridge.issueTicket(src)
   if not ok then TriggerClientEvent('proton_social_bridge:client:error', src, reason) end
 end)
+
+RegisterNetEvent('proton_social_bridge:server:clientStage', function(stage, detail)
+  print(('[proton_social_bridge] client stage src=%s stage=%s detail=%s'):format(tostring(source), tostring(stage), tostring(detail or '')))
+end)
