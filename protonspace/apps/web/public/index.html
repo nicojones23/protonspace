@@ -590,7 +590,15 @@
         background: linear-gradient(110deg, #48125f, #111448 55%, #082b37);
         border-bottom: 1px solid var(--cyan);
         padding: 18px;
+        background-size: cover;
+        background-position: center;
       }
+      .avatar.has-image { background-size:cover;background-position:center;color:transparent }
+      .profile-media { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 }
+      .profile-media label { border:1px dashed #71308e;background:#0b040f;padding:12px;text-align:center;color:var(--cyan);cursor:pointer }
+      .profile-media input { display:none }
+      #profileView .box.rounded { border-radius:14px;overflow:hidden }
+      #profileView .box.compact .hero-strip { min-height:64px;padding:10px }
       .cardgrid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -759,7 +767,7 @@
           <section id="profileView" class="view" hidden>
             <div class="box">
               <div class="boxtitle">Build My Space</div>
-              <div class="hero-strip">
+              <div class="hero-strip" id="profileHero">
                 <div class="profilecard">
                   <div class="avatar" id="profileAvatar">PS</div>
                   <div>
@@ -774,6 +782,10 @@
                 </div>
               </div>
               <div class="boxbody">
+                <div class="profile-media">
+                  <label>Upload profile picture<input id="editAvatarFile" type="file" accept="image/jpeg,image/png,image/gif,image/webp" /></label>
+                  <label>Upload cover image<input id="editCoverFile" type="file" accept="image/jpeg,image/png,image/gif,image/webp" /></label>
+                </div>
                 <div class="formgrid">
                   <label class="field"
                     >Display name<input id="editDisplayName" /></label
@@ -790,11 +802,14 @@
                     >Location<input id="editLocation" /></label
                   ><label class="field wide"
                     >Interests<input id="editInterests" /></label
-                  ><label class="field"
-                    >Accent color<input
+                   ><label class="field"
+                     >Accent color<input
                       id="editAccent"
                       type="color"
-                      value="#9b46d8" /></label
+                       value="#9b46d8" /></label
+                  ><label class="field">Highlight color<input id="editHighlight" type="color" value="#4df5f5" /></label
+                  ><label class="field">Page background<input id="editBackground" type="color" value="#060209" /></label
+                  ><label class="field">Panel style<select id="editPanelStyle"><option value="sharp">Sharp cyberpunk</option><option value="rounded">Rounded</option><option value="compact">Compact terminal</option></select></label
                   ><label class="field"
                     >Visibility<select id="editVisibility">
                       <option>public</option>
@@ -945,6 +960,7 @@
         "",
       );
       let me = null;
+      let profileAvatarUrl = "", profileCoverUrl = "";
       const esc = (s) =>
         String(s || "").replace(
           /[&<>"']/g,
@@ -981,9 +997,7 @@
             document.querySelector("#" + id).textContent =
               me?.displayName || me?.username || "Citizen";
           for (const id of ["myAvatar", "profileAvatar"])
-            document.querySelector("#" + id).textContent = initials(
-              me?.displayName,
-            );
+            { const avatar=document.querySelector("#"+id);avatar.textContent=initials(me?.displayName);if(me?.avatarUrl){avatar.style.backgroundImage=`url("${me.avatarUrl.replace(/"/g,"%22")}")`;avatar.classList.add("has-image");} }
         } catch (e) {
           document.querySelector("#loginStatus").textContent =
             "The network is temporarily unavailable.";
@@ -1180,7 +1194,32 @@
         document.querySelector("#editSlug").value = p.slug || p.username || "";
         document.querySelector("#editHeadline").value = p.headline || "";
         document.querySelector("#editBio").value = p.bio || "";
+        document.querySelector("#editMood").value = p.mood || "";
+        document.querySelector("#editLocation").value = p.location || "";
+        document.querySelector("#editInterests").value = p.interests || "";
+        document.querySelector("#editVisibility").value = p.visibility || "public";
+        let theme={};try{theme=typeof p.theme==="string"?JSON.parse(p.theme||"{}"):p.theme||{};}catch{}
+        document.querySelector("#editAccent").value = theme.accent || "#9b46d8";
+        document.querySelector("#editHighlight").value = theme.highlight || "#4df5f5";
+        document.querySelector("#editBackground").value = theme.background || "#060209";
+        document.querySelector("#editPanelStyle").value = theme.panelStyle || "sharp";
+        profileAvatarUrl=p.avatarUrl||""; profileCoverUrl=p.coverUrl||""; previewProfile();
       }
+      function previewProfile(){
+        const avatar=document.querySelector("#profileAvatar"),hero=document.querySelector("#profileHero"),box=document.querySelector("#profileView .box");
+        avatar.style.backgroundImage=profileAvatarUrl?`url("${profileAvatarUrl.replace(/"/g,"%22")}")`:"";avatar.classList.toggle("has-image",Boolean(profileAvatarUrl));
+        hero.style.backgroundImage=profileCoverUrl?`linear-gradient(rgba(8,3,12,.35),rgba(8,3,12,.8)),url("${profileCoverUrl.replace(/"/g,"%22")}")`:"";
+        hero.style.borderColor=document.querySelector("#editHighlight").value; box.style.borderColor=document.querySelector("#editAccent").value;
+        box.style.backgroundColor=document.querySelector("#editBackground").value; box.classList.remove("rounded","compact");box.classList.add(document.querySelector("#editPanelStyle").value);
+      }
+      async function uploadProfileImage(file,kind){
+        if(!file)return;const status=document.querySelector("#profileStatus"),data=new FormData();data.append("media",file);status.innerHTML='<span class="uploading">Uploading image…</span>';
+        const r=await fetch(api+"/api/uploads",{method:"POST",credentials:"include",body:data}),d=await r.json();if(!r.ok){status.textContent="Image upload failed. Use JPEG, PNG, GIF, or WebP under 8 MB.";return;}
+        if(kind==="avatar")profileAvatarUrl=d.url;else profileCoverUrl=d.url;status.textContent="Image ready. Publish My Space to save it.";previewProfile();
+      }
+      document.querySelector("#editAvatarFile").onchange=e=>uploadProfileImage(e.target.files?.[0],"avatar");
+      document.querySelector("#editCoverFile").onchange=e=>uploadProfileImage(e.target.files?.[0],"cover");
+      for(const id of ["editAccent","editHighlight","editBackground","editPanelStyle"])document.querySelector("#"+id).oninput=previewProfile;
       document.querySelector("#saveProfile").onclick = async () => {
         const payload = {
           displayName: document.querySelector("#editDisplayName").value,
@@ -1191,7 +1230,9 @@
           location: document.querySelector("#editLocation").value,
           interests: document.querySelector("#editInterests").value,
           visibility: document.querySelector("#editVisibility").value,
-          theme: { accent: document.querySelector("#editAccent").value },
+          avatarUrl: profileAvatarUrl,
+          coverUrl: profileCoverUrl,
+          theme: { accent: document.querySelector("#editAccent").value,highlight:document.querySelector("#editHighlight").value,background:document.querySelector("#editBackground").value,panelStyle:document.querySelector("#editPanelStyle").value },
         };
         const r = await fetch(api + "/api/profile", {
           method: "PUT",
@@ -1205,6 +1246,10 @@
       };
       document.querySelector("#resetTheme").onclick = () => {
         document.querySelector("#editAccent").value = "#9b46d8";
+        document.querySelector("#editHighlight").value = "#4df5f5";
+        document.querySelector("#editBackground").value = "#060209";
+        document.querySelector("#editPanelStyle").value = "sharp";
+        previewProfile();
       };
       async function loadConversations() {
         const r = await fetch(api + "/api/conversations", {
