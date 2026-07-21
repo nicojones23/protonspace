@@ -2,7 +2,19 @@
   "name": "@cityos/protonspace-api",
   "private": true,
   "type": "module",
-  "scripts": {"dev": "tsx watch src/server.ts", "start": "node dist/server.js", "build": "tsc -p tsconfig.json"},
-  "dependencies": {"mysql2": "^3.14.1"},
-  "devDependencies": {"@types/node": "^22.15.0", "tsx": "^4.19.4", "typescript": "^5.8.3"}
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "mysql2": "^3.14.1"
+  },
+  "devDependencies": {
+    "@types/busboy": "^1.5.4",
+    "@types/node": "^22.15.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
 }
