@@ -4,5 +4,5 @@ ProtonSocialBridgeConfig = {
   apiSecret = GetConvar('protonspace_api_secret', ''),
   webUrl = GetConvar('protonspace_web_url', 'https://protonspace.mhprotonspace.org/'),
   ticketTtlSeconds = 45,
-  appId = 'protonspace',
+  appId = 'proton',
 }

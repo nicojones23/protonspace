@@ -30,7 +30,19 @@ function ProtonSocialBridge.issueTicket(src)
       TriggerClientEvent('proton_social_bridge:client:error', src, 'invalid ticket response')
       return
     end
-    TriggerClientEvent('proton_social_bridge:client:ticket', src, decoded.ticket)
+    local base = ProtonSocialBridgeConfig.webUrl:gsub('/$', '')
+    TriggerClientEvent('cityos_mobile:client:browserOpen', src, {
+      ok = true,
+      appId = ProtonSocialBridgeConfig.appId,
+      manifest = {
+        id = ProtonSocialBridgeConfig.appId,
+        name = 'ProtonSpace',
+        icon = 'PS',
+        launch = { type = 'browser' },
+        browser = { source = 'absolute', route = base .. '/?ticket=' .. decoded.ticket, mode = 'contained' },
+      },
+    })
+    print(('[proton_social_bridge] browser handoff delivered src=%s'):format(tostring(src)))
   end, 'POST', json.encode({ citizenId = c.citizenId, characterName = c.characterName }), { ['Content-Type'] = 'application/json', ['X-CityOS-Ticket-Secret'] = ProtonSocialBridgeConfig.apiSecret })
   return true, 'ticket_request_queued'
 end
