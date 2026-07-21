@@ -700,7 +700,7 @@
     <div class="page">
       <div class="tabs">
         <button class="active" data-view="home">Home</button
-        ><button data-view="profile">My Space</button
+        ><button data-view="profile">5Space</button
         ><button data-view="people">People</button
         ><button data-view="messages">Messages</button
         ><button data-view="communities">Communities</button
@@ -766,7 +766,7 @@
           </section>
           <section id="profileView" class="view" hidden>
             <div class="box">
-              <div class="boxtitle">Build My Space</div>
+              <div class="boxtitle">Build Your 5Space</div>
               <div class="hero-strip" id="profileHero">
                 <div class="profilecard">
                   <div class="avatar" id="profileAvatar">PS</div>
@@ -820,7 +820,7 @@
                 </div>
                 <div class="toolbar">
                   <button class="primary" id="saveProfile">
-                    Publish My Space</button
+                    Publish 5Space</button
                   ><button class="secondary" id="resetTheme">
                     Reset Theme
                   </button>
@@ -1215,7 +1215,7 @@
       async function uploadProfileImage(file,kind){
         if(!file)return;const status=document.querySelector("#profileStatus"),data=new FormData();data.append("media",file);status.innerHTML='<span class="uploading">Uploading image…</span>';
         const r=await fetch(api+"/api/uploads",{method:"POST",credentials:"include",body:data}),d=await r.json();if(!r.ok){status.textContent="Image upload failed. Use JPEG, PNG, GIF, or WebP under 8 MB.";return;}
-        if(kind==="avatar")profileAvatarUrl=d.url;else profileCoverUrl=d.url;status.textContent="Image ready. Publish My Space to save it.";previewProfile();
+        if(kind==="avatar")profileAvatarUrl=d.url;else profileCoverUrl=d.url;status.textContent="Image ready. Publish 5Space to save it.";previewProfile();
       }
       document.querySelector("#editAvatarFile").onchange=e=>uploadProfileImage(e.target.files?.[0],"avatar");
       document.querySelector("#editCoverFile").onchange=e=>uploadProfileImage(e.target.files?.[0],"cover");
