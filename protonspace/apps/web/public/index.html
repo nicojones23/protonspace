@@ -1299,8 +1299,20 @@
         });
         loadNotifications();
       };
-      session();
-      loadFeed();
+      async function boot() {
+        const params = new URLSearchParams(location.search), ticket = params.get("ticket");
+        if (ticket) {
+          document.querySelector("#loginStatus").textContent = "Linking your CityOS identity…";
+          const exchanged = await fetch(api + "/api/auth/ticket/exchange", {
+            method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ ticket }),
+          }).catch(() => null);
+          history.replaceState({}, "", location.pathname);
+          if (!exchanged?.ok) document.querySelector("#loginStatus").textContent = "CityOS identity link expired. Reopen ProtonSpace from the game.";
+        }
+        await session();
+        loadFeed();
+      }
+      boot();
     </script>
   </body>
 </html>

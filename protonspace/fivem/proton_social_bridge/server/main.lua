@@ -21,8 +21,24 @@ function ProtonSocialBridge.issueTicket(src)
   local result, response
   PerformHttpRequest(ProtonSocialBridgeConfig.apiBase .. '/internal/cityos/tickets', function(status, body)
     result, response = status, body
+    if status < 200 or status >= 300 then
+      TriggerClientEvent('proton_social_bridge:client:error', src, 'ticket request failed (' .. tostring(status) .. ')')
+      return
+    end
+    local ok, decoded = pcall(json.decode, body or '')
+    if not ok or type(decoded) ~= 'table' or type(decoded.ticket) ~= 'string' then
+      TriggerClientEvent('proton_social_bridge:client:error', src, 'invalid ticket response')
+      return
+    end
+    TriggerClientEvent('proton_social_bridge:client:ticket', src, decoded.ticket)
   end, 'POST', json.encode({ citizenId = c.citizenId, characterName = c.characterName }), { ['Content-Type'] = 'application/json', ['X-CityOS-Ticket-Secret'] = ProtonSocialBridgeConfig.apiSecret })
   return true, 'ticket_request_queued'
 end
 
 exports('IssueTicket', ProtonSocialBridge.issueTicket)
+
+RegisterNetEvent('proton_social_bridge:server:requestTicket', function()
+  local src = source
+  local ok, reason = ProtonSocialBridge.issueTicket(src)
+  if not ok then TriggerClientEvent('proton_social_bridge:client:error', src, reason) end
+end)
