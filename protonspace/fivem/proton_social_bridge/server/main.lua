@@ -47,7 +47,7 @@ function ProtonSocialBridge.issueTicket(src)
         name = 'ProtonSpace',
         icon = 'PS',
         launch = { type = 'browser' },
-        browser = { source = 'absolute', route = base .. '/?ticket=' .. decoded.ticket, mode = 'contained' },
+        browser = { source = 'absolute', route = base .. '/?surface=game&ticket=' .. decoded.ticket .. '&v=' .. tostring(os.time()), mode = 'contained' },
       },
     })
     print(('[proton_social_bridge] browser handoff delivered src=%s'):format(tostring(src)))

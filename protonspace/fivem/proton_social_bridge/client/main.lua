@@ -17,7 +17,7 @@ RegisterNetEvent('proton_social_bridge:client:ticket', function(ticket)
       name = 'ProtonSpace',
       icon = 'PS',
       launch = { type = 'browser' },
-      browser = { source = 'absolute', route = base .. '/?ticket=' .. ticket, mode = 'contained' },
+      browser = { source = 'absolute', route = base .. '/?surface=game&ticket=' .. ticket .. '&v=' .. tostring(GetGameTimer()), mode = 'contained' },
     },
   })
 end)

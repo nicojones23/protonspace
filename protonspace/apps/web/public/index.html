@@ -959,6 +959,17 @@
         /\/$/,
         "",
       );
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = (input, init = {}) => {
+        const target = typeof input === "string" ? input : input?.url || "";
+        const gameSession = sessionStorage.getItem("proton_game_session");
+        if (gameSession && target.startsWith(api)) {
+          const headers = new Headers(init.headers || (typeof input !== "string" ? input.headers : undefined));
+          headers.set("authorization", "Bearer " + gameSession);
+          init = { ...init, headers };
+        }
+        return nativeFetch(input, init);
+      };
       let me = null;
       let profileAvatarUrl = "", profileCoverUrl = "";
       const esc = (s) =>
@@ -1014,6 +1025,7 @@
           method: "POST",
           credentials: "include",
         });
+        sessionStorage.removeItem("proton_game_session");
         location.reload();
       };
       document.querySelector("#postBody").oninput = (e) =>
@@ -1361,6 +1373,8 @@
           const exchanged = await fetch(api + "/api/auth/ticket/exchange", {
             method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ ticket }),
           }).catch(() => null);
+          const exchangeData = exchanged?.ok ? await exchanged.json().catch(() => ({})) : {};
+          if (exchangeData.sessionToken) sessionStorage.setItem("proton_game_session", exchangeData.sessionToken);
           history.replaceState({}, "", location.pathname);
           if (!exchanged?.ok) document.querySelector("#loginStatus").textContent = "CityOS identity link expired. Reopen ProtonSpace from the game.";
         }
